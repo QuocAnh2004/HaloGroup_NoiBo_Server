@@ -1,0 +1,68 @@
+
+version: '3.8'
+
+services:
+  # 1. Express Backend Server
+  server:
+    build: .
+    container_name: project_management_server
+    restart: always
+    ports:
+      - "3001:3001" # Hardcode port dev
+    environment:
+      # Cấu hình cứng để luôn dùng Local DB trong Docker
+      - DB_HOST=mysql
+      - DB_USER=root
+      - DB_PASSWORD=rootpassword
+      - DB_NAME=project_management_db
+      - DB_PORT=3306
+      # Không truyền DB_SSL_CA để server chạy mode không SSL
+      - PORT=3001
+      - JWT_SECRET=dev_secret_key
+    depends_on:
+      - mysql
+    networks:
+      - project_management_network
+
+  # 2. MySQL Database (Local Dev)
+  mysql:
+    image: mysql:8.0
+    container_name: project_management_mysql
+    # Force utf8mb4
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: project_management_db
+    ports:
+      # Map ra port 3307 ở máy host để không đụng port 3306 (nếu máy bạn đang chạy mysql khác)
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      # Tự động chạy file SQL khởi tạo khi container tạo lần đầu
+      - ./data/database.txt:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - project_management_network
+
+  # 3. phpMyAdmin (Quản lý DB Local)
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: project_management_phpmyadmin
+    restart: always
+    environment:
+      PMA_HOST: mysql
+      PMA_USER: root
+      PMA_PASSWORD: rootpassword
+    ports:
+      - "8080:80"
+    depends_on:
+      - mysql
+    networks:
+      - project_management_network
+
+volumes:
+  mysql_data:
+
+networks:
+  project_management_network:
+    driver: bridge
