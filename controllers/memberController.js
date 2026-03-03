@@ -4,7 +4,7 @@ const { query } = require('../config/db');
 exports.getAllMembers = async (req, res) => {
   try {
     // Chỉ lấy các trường cần thiết, không lấy password
-    const members = await query('SELECT id, name, role, avatar_url, position, department, created_at FROM users ORDER BY created_at DESC');
+    const members = await query('SELECT id, name, role, avatar_url, position, department_id, created_at FROM users ORDER BY created_at DESC');
     res.json(members);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -14,18 +14,36 @@ exports.getAllMembers = async (req, res) => {
 exports.getMemberById = async (req, res) => {
   try {
     const { id } = req.params;
-    // Lấy full thông tin (trừ password)
+    // Lấy full thông tin (trừ password) với thông tin phòng ban
     const users = await query(`
-      SELECT id, name, role, avatar_url, created_at, 
-             email, phone, position, level, department, skills, github_url 
-      FROM users WHERE id = ?
+      SELECT u.id, u.name, u.role, u.avatar_url, u.created_at, 
+             u.email, u.phone, u.position, u.level, u.department_id, u.skills, u.github_url,
+             d.name as departmentName, d.code as departmentCode
+      FROM users u 
+      LEFT JOIN departments d ON u.department_id = d.id
+      WHERE u.id = ?
     `, [id]);
     
     if (users.length === 0) {
       return res.status(404).json({ message: 'Nhân viên không tồn tại.' });
     }
 
-    res.json(users[0]);
+    const user = users[0];
+    // Format response để include department object nếu có
+    const response = {
+      ...user,
+      department: user.departmentName ? {
+        id: user.department_id,
+        name: user.departmentName,
+        code: user.departmentCode
+      } : null
+    };
+
+    // Remove the flat department fields
+    delete response.departmentName;
+    delete response.departmentCode;
+
+    res.json(response);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
