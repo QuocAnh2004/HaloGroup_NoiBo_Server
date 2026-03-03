@@ -1,0 +1,257 @@
+
+-- =====================================
+-- Encoding (OK cho tiếng Việt)
+-- =====================================
+SET NAMES utf8mb4;
+SET CHARACTER SET utf8mb4;
+
+-- =====================================
+-- Aiven: sử dụng database có sẵn
+-- =====================================
+USE defaultdb;
+
+-- =====================================
+-- 1. Bảng Users
+-- =====================================
+CREATE TABLE IF NOT EXISTS users (
+    id VARCHAR(50) PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    role ENUM('MANAGER', 'MEMBER') NOT NULL DEFAULT 'MEMBER',
+    avatar_url TEXT,
+    
+    -- New Fields
+    email VARCHAR(255),
+    phone VARCHAR(20),
+    position VARCHAR(100), -- Vd: Frontend Developer
+    level VARCHAR(50),     -- Vd: Senior, Junior
+    department_id VARCHAR(50), -- Vd: Engineering
+    skills TEXT,           -- Lưu dạng JSON string hoặc comma separated
+    github_url TEXT,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    CONSTRAINT fk_user_department
+        FOREIGN KEY (department_id)
+        REFERENCES departments(id)
+        ON DELETE SET NULL
+) ENGINE=InnoDB
+CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- =====================================
+-- 2. Bảng Projects
+-- =====================================
+CREATE TABLE IF NOT EXISTS projects (
+    id VARCHAR(50) PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    status VARCHAR(50) DEFAULT 'Đang làm',
+    priority VARCHAR(20) DEFAULT 'Trung bình',
+    start_date DATE,
+    due_date DATE,
+    progress INT DEFAULT 0,
+    github_url TEXT,
+    live_url TEXT,
+    category VARCHAR(100),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB
+CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- =====================================
+-- 3. Tech stack của Project
+-- =====================================
+CREATE TABLE IF NOT EXISTS project_tech_stacks (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    project_id VARCHAR(50) NOT NULL,
+    tech_name VARCHAR(100) NOT NULL,
+    CONSTRAINT fk_project_tech
+        FOREIGN KEY (project_id)
+        REFERENCES projects(id)
+        ON DELETE CASCADE
+) ENGINE=InnoDB
+CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- =====================================
+-- 4. Thành viên Project (N-N)
+-- =====================================
+CREATE TABLE IF NOT EXISTS project_members (
+    project_id VARCHAR(50) NOT NULL,
+    user_id VARCHAR(50) NOT NULL,
+    joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (project_id, user_id),
+    CONSTRAINT fk_pm_project
+        FOREIGN KEY (project_id)
+        REFERENCES projects(id)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_pm_user
+        FOREIGN KEY (user_id)
+        REFERENCES users(id)
+        ON DELETE CASCADE
+) ENGINE=InnoDB
+CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- =====================================
+-- 5. Task Groups
+-- =====================================
+CREATE TABLE IF NOT EXISTS task_groups (
+    id VARCHAR(50) PRIMARY KEY,
+    project_id VARCHAR(50) NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    estimated_time DATETIME,
+    late_reason TEXT, -- Lý do trễ hạn
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_task_group_project
+        FOREIGN KEY (project_id)
+        REFERENCES projects(id)
+        ON DELETE CASCADE
+) ENGINE=InnoDB
+CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- =====================================
+-- 6. Phân công Task Group
+-- =====================================
+CREATE TABLE IF NOT EXISTS task_group_assignments (
+    group_id VARCHAR(50) NOT NULL,
+    user_id VARCHAR(50) NOT NULL,
+    PRIMARY KEY (group_id, user_id),
+    CONSTRAINT fk_tga_group
+        FOREIGN KEY (group_id)
+        REFERENCES task_groups(id)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_tga_user
+        FOREIGN KEY (user_id)
+        REFERENCES users(id)
+        ON DELETE CASCADE
+) ENGINE=InnoDB
+CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- =====================================
+-- 7. Task Items
+-- =====================================
+CREATE TABLE IF NOT EXISTS task_items (
+    id VARCHAR(50) PRIMARY KEY,
+    group_id VARCHAR(50) NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    estimated_time DATETIME,
+    late_reason TEXT, -- Lý do trễ hạn
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_task_item_group
+        FOREIGN KEY (group_id)
+        REFERENCES task_groups(id)
+        ON DELETE CASCADE
+) ENGINE=InnoDB
+CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- =====================================
+-- 8. Phân công Task Item
+-- =====================================
+CREATE TABLE IF NOT EXISTS task_item_assignments (
+    item_id VARCHAR(50) NOT NULL,
+    user_id VARCHAR(50) NOT NULL,
+    PRIMARY KEY (item_id, user_id),
+    CONSTRAINT fk_tia_item
+        FOREIGN KEY (item_id)
+        REFERENCES task_items(id)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_tia_user
+        FOREIGN KEY (user_id)
+        REFERENCES users(id)
+        ON DELETE CASCADE
+) ENGINE=InnoDB
+CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- =====================================
+-- 9. Check Items
+-- =====================================
+CREATE TABLE IF NOT EXISTS check_items (
+    id VARCHAR(50) PRIMARY KEY,
+    item_id VARCHAR(50) NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    completed BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_check_item
+        FOREIGN KEY (item_id)
+        REFERENCES task_items(id)
+        ON DELETE CASCADE
+) ENGINE=InnoDB
+CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- =====================================
+-- 10. Project Notifications
+-- =====================================
+CREATE TABLE IF NOT EXISTS project_notifications (
+    id VARCHAR(50) PRIMARY KEY,
+    project_id VARCHAR(50) NOT NULL,
+    content TEXT NOT NULL,
+    type ENUM('GENERAL', 'PERSONAL') NOT NULL DEFAULT 'GENERAL',
+    target_member_id VARCHAR(50), -- NULL nếu là GENERAL
+    sender_name VARCHAR(100),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_pn_project
+        FOREIGN KEY (project_id)
+        REFERENCES projects(id)
+        ON DELETE CASCADE
+) ENGINE=InnoDB
+CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- =====================================
+-- 11. Departments
+-- =====================================
+CREATE TABLE departments (
+    id VARCHAR(50) PRIMARY KEY,
+    name VARCHAR(150) NOT NULL,
+    code VARCHAR(20) UNIQUE,
+    description TEXT,
+    manager_id VARCHAR(50),
+    status ENUM('ACTIVE','INACTIVE') DEFAULT 'ACTIVE',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_department_manager
+        FOREIGN KEY (manager_id)
+        REFERENCES users(id)
+        ON DELETE SET NULL
+);
+-- =====================================
+-- SEED DATA (DEMO)
+-- =====================================
+
+-- Thêm departments trước (vì users có foreign key tham chiếu)
+INSERT INTO departments (id, name, code, description, manager_id) VALUES
+('d1', 'Engineering', 'ENG', 'Phòng phát triển hệ thống & kỹ thuật', NULL),
+('d2', 'Management', 'MNG', 'Phòng quản lý & điều hành dự án', NULL);
+
+-- Thêm users với department_id
+INSERT INTO users (id, name, password, role, position, level, department_id, skills, email) VALUES
+('1024', 'Nguyễn Văn An', '123', 'MANAGER', 'Project Manager', 'Senior', 'd2', 'Management, Agile, Jira', 'an.nguyen@hola.com'),
+('4592', 'Trần Thị Bình', '123', 'MEMBER', 'Frontend Developer', 'Mid-Level', 'd1', 'React, TypeScript, Tailwind', 'binh.tran@hola.com'),
+('8831', 'Lê Minh Cường', '123', 'MEMBER', 'Backend Developer', 'Junior', 'd1', 'Node.js, MySQL, Docker', 'cuong.le@hola.com');
+
+-- Cập nhật manager_id cho departments
+UPDATE departments SET manager_id = '1024' WHERE id = 'd2';
+UPDATE departments SET manager_id = '4592' WHERE id = 'd1';
+
+INSERT INTO projects (id, name, description, status, priority, start_date, due_date, progress) VALUES
+('1', 'Hệ thống Quản lý Kho', 'Xây dựng hệ thống quản lý kho thông minh...', 'Đang làm', 'Cao', '2023-10-01', '2024-03-01', 65);
+
+INSERT INTO project_members (project_id, user_id) VALUES
+('1', '1024'),
+('1', '4592');
+
+INSERT INTO project_tech_stacks (project_id, tech_name) VALUES
+('1', 'React'),
+('1', 'Node.js');
+
+INSERT INTO task_groups (id, project_id, title, description, estimated_time) VALUES
+('g1', '1', 'Phân tích & Thiết kế hệ thống', 'Phân tích yêu cầu...', '2024-03-08 17:00:00');
+
+INSERT INTO task_items (id, group_id, title, estimated_time) VALUES
+('i1', 'g1', 'Thiết kế Database ERD', '2024-03-03 09:00:00');
+
+INSERT INTO check_items (id, item_id, title, completed) VALUES
+('c1', 'i1', 'Xác định các entity chính', TRUE),
+('c2', 'i1', 'Thiết lập mối quan hệ', TRUE);
