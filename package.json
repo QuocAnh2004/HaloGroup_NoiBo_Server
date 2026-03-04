@@ -8,13 +8,16 @@
     "dev": "nodemon --watch . --ext js,json,ts,html,css index.js"
   },
   "dependencies": {
+    "@stomp/stompjs": "^7.3.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.18.2",
     "jsonwebtoken": "^9.0.2",
     "mysql2": "^3.9.2",
     "sockjs": "^0.3.24",
-    "stomp-broker-js": "^1.3.0"
+    "sockjs-client": "^1.6.1",
+    "stomp-broker-js": "^1.3.0",
+    "stompjs": "^2.3.3"
   },
   "devDependencies": {
     "nodemon": "^3.1.11"

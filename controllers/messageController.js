@@ -1,59 +1,6 @@
 const { query } = require("../config/db");
-const { sendToUser, sendToChannelByUsers } = require("../socket/stomp");
+const { sendToUser, sendToChannelByUsers, sendToPublicByUsers, sendToNotify } = require("../socket/stomp");
 
-// const sendMessage = async (req, res) => {
-//   const { receiver_id, content } = req.body;
-//   const sender_id = req.user.id;
-
-//   try {
-//     const sql = `
-//       INSERT INTO messages (sender_id, receiver_id, content)
-//       VALUES (?, ?, ?)
-//     `;
-//     await query(sql, [sender_id, receiver_id, content]);
-//     return res.json({ message: "Message sent" });
-//   } catch (err) {
-//     console.error("❌ sendMessage error:", err);
-//     return res.status(500).json({ error: err.message });
-//   }
-// };
-// const { query } = require("../config/db");
-
-// const sendMessage = async (req, res) => {
-//   const { receiver_id, content } = req.body;
-//   const sender_id = req.user?.id;
-
-//   if (!sender_id) return res.status(401).json({ error: "Unauthorized" });
-//   if (!receiver_id) return res.status(400).json({ error: "receiver_id is required" });
-
-//   const text = String(content ?? "").trim();
-//   if (!text) return res.status(400).json({ error: "content is required" });
-
-//   try {
-//     const insertSql = `
-//       INSERT INTO messages (sender_id, receiver_id, content)
-//       VALUES (?, ?, ?)
-//     `;
-
-//     const result = await query(insertSql, [sender_id, receiver_id, text]);
-
-//     // result.insertId (mysql2) - nếu query wrapper của bạn trả như mysql2
-//     const insertedId = result?.insertId;
-
-//     if (!insertedId) {
-//       // fallback: vẫn trả ok nếu wrapper không có insertId
-//       return res.json({ message: "Message sent" });
-//     }
-
-//     const selectSql = `SELECT * FROM messages WHERE message_id = ? LIMIT 1`;
-//     const rows = await query(selectSql, [insertedId]);
-
-//     return res.json(rows?.[0] ?? { message_id: insertedId, sender_id, receiver_id, content: text });
-//   } catch (err) {
-//     console.error("❌ sendMessage error:", err);
-//     return res.status(500).json({ error: err.message });
-//   }
-// };
 
 const sendMessage = async (req, res) => {
   const { receiver_id, content } = req.body;
@@ -99,9 +46,22 @@ const sendMessage = async (req, res) => {
 
     // Gửi cho người nhận
     // sendToUser(String(receiver_id), created);
-    sendToChannel(channelId, created);  // gửi tới channel
+    sendToChannelByUsers(String(sender_id), String(receiver_id), created); // gửi tới channel
+    console.log("logggg ", String(sender_id), String(receiver_id), created);
+    sendToPublicByUsers(String(sender_id), String(receiver_id), created);
 
-    // (Optional) gửi lại cho sender (sync nhiều tab)
+    // ✅ 3) Notify cho người nhận để FE refresh danh sách chat (nếu FE có subscribe /topic/notify/{username})
+    sendToNotify(String(receiver_id), {
+      type: "NEW_MESSAGE",
+      from: String(sender_id),
+      message: created,
+    });
+
+    console.log("✅ WS broadcast", {
+      sender_id,
+      receiver_id,
+      message_id: created?.message_id
+    });    // (Optional) gửi lại cho sender (sync nhiều tab)
     // sendToUser(String(sender_id), created);
 
     // 5️⃣ Trả response cho REST
@@ -142,7 +102,7 @@ const getConversationMessages = async (req, res) => {
     `;
     const data = await query(sql, [myId, userId, userId, myId]);
 
-    console.log("getConversationMessages dataaaaaaaaaa:", data);
+    // console.log("getConversationMessages dataaaaaaaaaa:", data);
     return res.json(data);
   } catch (err) {
     console.error("❌ getConversationMessages error:", err);
@@ -150,31 +110,10 @@ const getConversationMessages = async (req, res) => {
   }
 };
 
-// // ✅ GET single message by ID
-// const getMessageById = async (req, res) => {
-//   // const { id } = 1024; // Lấy ID tin nhắn từ URL
-//   const { id } = req.params; // Lấy ID tin nhắn từ URL
-
-//   try {
-//     const sql = `SELECT * FROM messages WHERE sender_id = ?`;
-//     const data = await query(sql, [id]);
-
-//     if (data.length === 0) {
-//       return res.status(404).json({ message: "Không tìm thấy tin nhắn này." });
-//     }
-
-//     console.log("✅ getMessageById success:", id);
-//     return res.json(data[0]); // Trả về đối tượng tin nhắn đầu tiên tìm thấy
-//   } catch (err) {
-//     console.error("❌ getMessageById error:", err);
-//     return res.status(500).json({ error: err.message });
-//   }
-// };
-
 const getMessageById = async (req, res) => {
-// const { id } = req.params;
-const id = req.user.id;
-    //  SELECT * FROM MESSAGES WHERE sender_id = ?;
+  // const { id } = req.params; 
+  const id = req.user.id;
+  //  SELECT * FROM MESSAGES WHERE sender_id = ?;
 
   try {
     const sql = `
@@ -223,12 +162,6 @@ const getUsersByIds = async (req, res) => {
     return res.status(500).json({ error: err.message });
   }
 };
-
-
-// module.exports = { sendMessage, getAllMessages, getConversationMessages, getMessageById,getUsersByIds };
-
-
-
 module.exports = {
   sendMessage,
   getAllMessages,
