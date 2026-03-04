@@ -8,6 +8,7 @@ const authRoutes = require('./routes/authRoutes');
 const memberRoutes = require('./routes/memberRoutes');
 const projectRoutes = require('./routes/projectRoutes');
 const taskRoutes = require('./routes/taskRoutes');
+const departmentRoutes = require('./routes/departmentRoutes');
 // chat 
 
 const messageRoutes = require('./routes/messageRoutes');
@@ -26,6 +27,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/members', memberRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/tasks', taskRoutes);
+app.use('/api/departments', departmentRoutes);
 
 console.log("✅ messageRoutes mounted at /api/messages");
 
