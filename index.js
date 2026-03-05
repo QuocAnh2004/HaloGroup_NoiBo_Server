@@ -13,7 +13,7 @@ const departmentRoutes = require('./routes/departmentRoutes');
 
 const messageRoutes = require('./routes/messageRoutes');
 
-const { initStomp } = require("./socket/stomp"); // ✅ thêm
+// const { initStomp } = require("./socket/stomp"); // ✅ thêm
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -59,7 +59,10 @@ app.get('/api/test-db', async (req, res) => {
 const server = http.createServer(app);
 
 // ✅ Mount STOMP/SockJS at /ws
-initStomp(server);
+// initStomp(server);
+const { initSocket } = require("./socket/socket");  // trỏ đúng tên file mới
+// ...
+initSocket(server);
 
 // ✅ Start server
 server.listen(PORT, async () => {

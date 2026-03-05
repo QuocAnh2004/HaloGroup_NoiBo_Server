@@ -1,6 +1,6 @@
 const { query } = require("../config/db");
-const { sendToUser, sendToChannelByUsers, sendToPublicByUsers, sendToNotify } = require("../socket/stomp");
-
+// ✅ FIX: import từ socket.js (không phải stomp.js)
+const { sendToPublicByUsers, sendToNotify, sendToUser } = require("../socket/socket");
 
 const sendMessage = async (req, res) => {
   const { receiver_id, content } = req.body;
@@ -40,17 +40,11 @@ const sendMessage = async (req, res) => {
       if (rows?.[0]) created = rows[0];
     }
 
-    // ===============================
-    // 4️⃣ 🔥 REALTIME WEBSOCKET 🔥
-    // ===============================
-
-    // Gửi cho người nhận
-    // sendToUser(String(receiver_id), created);
-    sendToChannelByUsers(String(sender_id), String(receiver_id), created); // gửi tới channel
-    console.log("logggg ", String(sender_id), String(receiver_id), created);
+    // 4️⃣ 🔥 REALTIME via Socket.IO 🔥
+    // ✅ FIX: bỏ sendToChannelByUsers (không tồn tại), chỉ dùng sendToPublicByUsers
     sendToPublicByUsers(String(sender_id), String(receiver_id), created);
 
-    // ✅ 3) Notify cho người nhận để FE refresh danh sách chat (nếu FE có subscribe /topic/notify/{username})
+    // Notify cho người nhận để FE refresh danh sách chat
     sendToNotify(String(receiver_id), {
       type: "NEW_MESSAGE",
       from: String(sender_id),
@@ -61,8 +55,7 @@ const sendMessage = async (req, res) => {
       sender_id,
       receiver_id,
       message_id: created?.message_id
-    });    // (Optional) gửi lại cho sender (sync nhiều tab)
-    // sendToUser(String(sender_id), created);
+    });
 
     // 5️⃣ Trả response cho REST
     return res.json(created);
@@ -102,7 +95,6 @@ const getConversationMessages = async (req, res) => {
     `;
     const data = await query(sql, [myId, userId, userId, myId]);
 
-    // console.log("getConversationMessages dataaaaaaaaaa:", data);
     return res.json(data);
   } catch (err) {
     console.error("❌ getConversationMessages error:", err);
@@ -111,9 +103,7 @@ const getConversationMessages = async (req, res) => {
 };
 
 const getMessageById = async (req, res) => {
-  // const { id } = req.params; 
   const id = req.user.id;
-  //  SELECT * FROM MESSAGES WHERE sender_id = ?;
 
   try {
     const sql = `
@@ -124,7 +114,6 @@ const getMessageById = async (req, res) => {
         END AS userId
       FROM messages
       WHERE sender_id = ? OR receiver_id = ?
-
     `;
 
     const data = await query(sql, [id, id, id]);
@@ -137,7 +126,7 @@ const getMessageById = async (req, res) => {
 };
 
 const getUsersByIds = async (req, res) => {
-  const { ids } = req.body; // ["4592","8831","1024"]
+  const { ids } = req.body;
 
   if (!Array.isArray(ids) || ids.length === 0) {
     return res.json([]);
@@ -162,6 +151,7 @@ const getUsersByIds = async (req, res) => {
     return res.status(500).json({ error: err.message });
   }
 };
+
 module.exports = {
   sendMessage,
   getAllMessages,
