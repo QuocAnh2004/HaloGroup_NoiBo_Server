@@ -11,7 +11,24 @@ SET CHARACTER SET utf8mb4;
 USE defaultdb;
 
 -- =====================================
--- 1. Bảng Users
+-- 1. Bảng Departments
+-- =====================================
+CREATE TABLE IF NOT EXISTS departments (
+    id VARCHAR(50) PRIMARY KEY,
+    name VARCHAR(150) NOT NULL,
+    code VARCHAR(20) UNIQUE,
+    description TEXT,
+    manager_id VARCHAR(50),
+    status ENUM('ACTIVE','INACTIVE') DEFAULT 'ACTIVE',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    -- Bỏ foreign key manager_id tham chiếu users ở dây vì users chưa được tạo, 
+    -- ta sẽ ALTER TABLE sau khi tạo bảng users.
+) ENGINE=InnoDB
+CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- =====================================
+-- 2. Bảng Users
 -- =====================================
 CREATE TABLE IF NOT EXISTS users (
     id VARCHAR(50) PRIMARY KEY,
@@ -38,6 +55,11 @@ CREATE TABLE IF NOT EXISTS users (
         ON DELETE SET NULL
 ) ENGINE=InnoDB
 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- Thêm lại FK manager_id cho departments tham chiếu đến users
+ALTER TABLE departments 
+ADD CONSTRAINT fk_department_manager
+FOREIGN KEY (manager_id) REFERENCES users(id) ON DELETE SET NULL;
 
 -- =====================================
 -- 2. Bảng Projects
@@ -198,24 +220,7 @@ CREATE TABLE IF NOT EXISTS project_notifications (
 ) ENGINE=InnoDB
 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
--- =====================================
--- 11. Departments
--- =====================================
-CREATE TABLE departments (
-    id VARCHAR(50) PRIMARY KEY,
-    name VARCHAR(150) NOT NULL,
-    code VARCHAR(20) UNIQUE,
-    description TEXT,
-    manager_id VARCHAR(50),
-    status ENUM('ACTIVE','INACTIVE') DEFAULT 'ACTIVE',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-
-    CONSTRAINT fk_department_manager
-        FOREIGN KEY (manager_id)
-        REFERENCES users(id)
-        ON DELETE SET NULL
-);
+-- (Deleted departments table creation from here as it was moved to the top)
 -- =====================================
 -- SEED DATA (DEMO)
 -- =====================================
