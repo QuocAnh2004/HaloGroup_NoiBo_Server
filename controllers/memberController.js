@@ -11,6 +11,38 @@ exports.getAllMembers = async (req, res) => {
   }
 };
 
+exports.getMembersWithTaskCount = async (req, res) => {
+  try {
+    const members = await query(`
+      SELECT 
+        u.id, u.name, u.role, u.avatar_url, u.position, u.department_id, u.created_at,
+        d.name as departmentName, d.code as departmentCode,
+        COALESCE(COUNT(CASE 
+          WHEN ti.id IS NOT NULL AND (
+            NOT EXISTS(SELECT 1 FROM check_items ci WHERE ci.item_id = ti.id) OR
+            EXISTS(SELECT 1 FROM check_items ci WHERE ci.item_id = ti.id AND ci.completed = FALSE)
+          ) THEN 1 
+        END), 0) as task_count
+      FROM users u 
+      LEFT JOIN departments d ON u.department_id = d.id
+      LEFT JOIN task_item_assignments tia ON u.id = tia.user_id
+      LEFT JOIN task_items ti ON tia.item_id = ti.id
+      GROUP BY u.id, u.name, u.role, u.avatar_url, u.position, u.department_id, u.created_at, d.name, d.code
+      ORDER BY u.created_at DESC
+    `);
+
+    // Format response với destructuring
+    const result = members.map(({ departmentName, departmentCode, department_id, ...member }) => ({
+      ...member,
+      department: departmentName ? { id: department_id, name: departmentName, code: departmentCode } : null
+    }));
+
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 exports.getMemberById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -23,7 +55,7 @@ exports.getMemberById = async (req, res) => {
       LEFT JOIN departments d ON u.department_id = d.id
       WHERE u.id = ?
     `, [id]);
-    
+
     if (users.length === 0) {
       return res.status(404).json({ message: 'Nhân viên không tồn tại.' });
     }
@@ -90,7 +122,7 @@ exports.updateMember = async (req, res) => {
       SET name = ?, email = ?, phone = ?, position = ?, level = ?, department = ?, skills = ?, github_url = ?
       WHERE id = ?
     `;
-    
+
     await query(sql, [name, email, phone, position, level, department, skills, github_url, id]);
 
     // Lấy lại thông tin đã update
@@ -99,7 +131,7 @@ exports.updateMember = async (req, res) => {
              email, phone, position, level, department, skills, github_url
       FROM users WHERE id = ?
     `, [id]);
-    
+
     res.json(updatedUser[0]);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -130,7 +162,7 @@ exports.deleteMember = async (req, res) => {
 exports.resetPassword = async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     // Sử dụng trim() để tránh lỗi nếu ID có khoảng trắng thừa
     const cleanId = id.toString().trim();
 
