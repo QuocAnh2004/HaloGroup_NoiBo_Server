@@ -222,41 +222,87 @@ CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- (Deleted departments table creation from here as it was moved to the top)
 -- =====================================
--- SEED DATA (DEMO)
+-- SEED DATA (FULL DEMO)
 -- =====================================
 
--- Thêm departments trước (vì users có foreign key tham chiếu)
+-- 1. Departments
 INSERT INTO departments (id, name, code, description, manager_id) VALUES
 ('d1', 'Engineering', 'ENG', 'Phòng phát triển hệ thống & kỹ thuật', NULL),
-('d2', 'Management', 'MNG', 'Phòng quản lý & điều hành dự án', NULL);
+('d2', 'Management', 'MNG', 'Phòng quản lý & điều hành dự án', NULL),
+('d3', 'Human Resources', 'HR', 'Phòng nhân sự & hành chính', NULL),
+('d4', 'Marketing', 'MKT', 'Phòng Marketing & Truyền thông', NULL);
 
--- Thêm users với department_id
+-- 2. Users
+-- 1024, 4592, 8831 đã có trong script trước, tôi sẽ viết lại toàn bộ để đảm bảo đồng bộ
+DELETE FROM users; -- Xóa cũ để nạp mới cho sạch
 INSERT INTO users (id, name, password, role, position, level, department_id, skills, email) VALUES
 ('1024', 'Nguyễn Văn An', '123', 'MANAGER', 'Project Manager', 'Senior', 'd2', 'Management, Agile, Jira', 'an.nguyen@hola.com'),
 ('4592', 'Trần Thị Bình', '123', 'MEMBER', 'Frontend Developer', 'Mid-Level', 'd1', 'React, TypeScript, Tailwind', 'binh.tran@hola.com'),
-('8831', 'Lê Minh Cường', '123', 'MEMBER', 'Backend Developer', 'Junior', 'd1', 'Node.js, MySQL, Docker', 'cuong.le@hola.com');
+('8831', 'Lê Minh Cường', '123', 'MEMBER', 'Backend Developer', 'Junior', 'd1', 'Node.js, MySQL, Docker', 'cuong.le@hola.com'),
+('5521', 'Phạm Hồng Dũng', '123', 'MEMBER', 'UI/UX Designer', 'Senior', 'd1', 'Figma, Adobe XD, Design System', 'dung.pham@hola.com'),
+('6672', 'Hoàng Thu Hải', '123', 'MEMBER', 'QC Engineer', 'Mid-Level', 'd1', 'Selenium, Jest, Automation Test', 'hai.hoang@hola.com'),
+('7783', 'Lý Mỹ Linh', '123', 'MEMBER', 'Content Creator', 'Junior', 'd4', 'Copywriting, SEO, Social Media', 'linh.ly@hola.com'),
+('9904', 'Vũ Quốc Phương', '123', 'MEMBER', 'HR Specialist', 'Mid-Level', 'd3', 'Recruitment, Payroll', 'phuong.vu@hola.com');
 
 -- Cập nhật manager_id cho departments
 UPDATE departments SET manager_id = '1024' WHERE id = 'd2';
 UPDATE departments SET manager_id = '4592' WHERE id = 'd1';
 
+-- 3. Projects
 INSERT INTO projects (id, name, description, status, priority, start_date, due_date, progress) VALUES
-('1', 'Hệ thống Quản lý Kho', 'Xây dựng hệ thống quản lý kho thông minh...', 'Đang làm', 'Cao', '2023-10-01', '2024-03-01', 65);
+('1', 'Hệ thống Quản lý Kho', 'Xây dựng hệ thống quản lý kho thông minh...', 'Đang làm', 'Cao', '2023-10-01', '2024-03-01', 65),
+('2', 'Ứng dụng Mobile Hola', 'Phát triển app quản lý công việc trên iOS/Android', 'Lên kế hoạch', 'Trung bình', '2024-01-15', '2024-08-30', 10),
+('3', 'Chiến dịch Brand Identity', 'Tái định vị thương hiệu HaloGroup 2024', 'Đang làm', 'Thấp', '2024-02-01', '2024-05-15', 30);
 
+-- 4. Project Members
 INSERT INTO project_members (project_id, user_id) VALUES
-('1', '1024'),
-('1', '4592');
+('1', '1024'), ('1', '4592'), ('1', '8831'), ('1', '6672'),
+('2', '1024'), ('2', '4592'), ('2', '5521'),
+('3', '1024'), ('3', '7783');
 
-INSERT INTO project_tech_stacks (project_id, tech_name) VALUES
-('1', 'React'),
-('1', 'Node.js');
+-- 5. Task Groups
+INSERT INTO task_groups (id, project_id, title, description) VALUES
+('g1', '1', 'Phân tích & Thiết kế', 'Thiết kế Database và UI/UX'),
+('g2', '2', 'Thiết kế Mobile App', 'Làm mockups và prototype'),
+('g3', '3', 'Content Marketing', 'Viết bài truyền thông');
 
-INSERT INTO task_groups (id, project_id, title, description, estimated_time) VALUES
-('g1', '1', 'Phân tích & Thiết kế hệ thống', 'Phân tích yêu cầu...', '2024-03-08 17:00:00');
+-- 6. Task Items
+INSERT INTO task_items (id, group_id, title) VALUES
+-- Project 1 tasks
+('i1', 'g1', 'Thiết kế Database ERD'),
+('i2', 'g1', 'Thiết kế giao diện (Figma)'),
+('i3', 'g1', 'Thiết lập API và Routes'),
+('i4', 'g1', 'Viết tài liệu hướng dẫn'),
+-- Project 2 tasks
+('i5', 'g2', 'Landing page app'),
+('i6', 'g2', 'Định nghĩa luồng login'),
+('i7', 'g2', 'Sketch màn hình chính'),
+-- Project 3 tasks
+('i8', 'g3', 'Kịch bản video giới thiệu');
 
-INSERT INTO task_items (id, group_id, title, estimated_time) VALUES
-('i1', 'g1', 'Thiết kế Database ERD', '2024-03-03 09:00:00');
+-- 7. Task Assignments (Phân phối để test màu sắc)
+INSERT INTO task_item_assignments (item_id, user_id) VALUES
+-- Trần Thị Bình (4592): 2 tasks -> Màu XANH
+('i1', '4592'), 
+('i2', '4592'),
+-- Lê Minh Cường (8831): 4 tasks -> Màu VÀNG
+('i3', '8831'),
+('i5', '8831'),
+('i6', '8831'),
+('i4', '8831'),
+-- Phạm Hồng Dũng (5521): 7 tasks -> Màu ĐỎ (Quá tải)
+('i7', '5521'), 
+('i8', '5521'),
+('i1', '5521'), ('i2', '5521'), ('i3', '5521'), ('i5', '5521'), ('i6', '5521');
 
+-- 8. Check Items (Cần có check item chưa hoàn thành để task được tính vào "đang làm")
 INSERT INTO check_items (id, item_id, title, completed) VALUES
-('c1', 'i1', 'Xác định các entity chính', TRUE),
-('c2', 'i1', 'Thiết lập mối quan hệ', TRUE);
+('c1', 'i1', 'Entity chính', TRUE),
+('c2', 'i1', 'Mối quan hệ', FALSE), -- Task i1 chưa xong
+('c3', 'i2', 'Figma layout', FALSE), -- Task i2 chưa xong
+('c4', 'i3', 'Express setup', FALSE), -- Task i3 chưa xong
+('c5', 'i4', 'Drafting', FALSE), -- Task i4 chưa xong
+('c6', 'i5', 'HTML/CSS', FALSE), -- Task i5 chưa xong
+('c7', 'i6', 'Flowchart', FALSE), -- Task i6 chưa xong
+('c8', 'i7', 'Sketching', FALSE), -- Task i7 chưa xong
+('c9', 'i8', 'Draft script', FALSE); -- Task i8 chưa xong
