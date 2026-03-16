@@ -8,7 +8,8 @@ SET CHARACTER SET utf8mb4;
 -- =====================================
 -- Aiven: sử dụng database có sẵn
 -- =====================================
-USE defaultdb;
+create database newdb2;
+USE newdb2;
 
 -- =====================================
 -- 1. Bảng Departments
@@ -219,16 +220,73 @@ CREATE TABLE IF NOT EXISTS project_notifications (
         ON DELETE CASCADE
 ) ENGINE=InnoDB
 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+--  ==============================
 
--- (Deleted departments table creation from here as it was moved to the top)
--- =====================================
--- SEED DATA (DEMO)
+-- messages table 
+-- ==================================
+
+CREATE TABLE IF NOT EXISTS messages (
+    message_id INT AUTO_INCREMENT PRIMARY KEY,
+    sender_id VARCHAR(50) NOT NULL,
+    receiver_id VARCHAR(50) NOT NULL,
+    content TEXT NOT NULL,
+    message_type ENUM('TEXT', 'IMAGE', 'FILE', 'AUDIO', 'VIDEO') DEFAULT 'TEXT',
+    
+    -- Trạng thái tin nhắn
+    is_read BOOLEAN DEFAULT FALSE,
+    is_deleted BOOLEAN DEFAULT FALSE,
+    
+    -- Tính năng nâng cao
+    reply_to_message_id INT DEFAULT NULL,
+    attachment_url TEXT DEFAULT NULL,
+    
+    -- Timestamps
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    read_at TIMESTAMP NULL DEFAULT NULL,
+    deleted_at TIMESTAMP NULL DEFAULT NULL,
+    
+    -- Foreign Keys
+    CONSTRAINT fk_sender 
+        FOREIGN KEY (sender_id) 
+        REFERENCES users(id) 
+        ON DELETE CASCADE 
+        ON UPDATE CASCADE,
+    
+    CONSTRAINT fk_receiver 
+        FOREIGN KEY (receiver_id) 
+        REFERENCES users(id) 
+        ON DELETE CASCADE 
+        ON UPDATE CASCADE,
+    
+    CONSTRAINT fk_reply_message 
+        FOREIGN KEY (reply_to_message_id) 
+        REFERENCES messages(message_id) 
+        ON DELETE SET NULL 
+        ON UPDATE CASCADE,
+    
+    -- Indexes
+    INDEX idx_sender (sender_id),
+    INDEX idx_receiver (receiver_id),
+    INDEX idx_created_at (created_at),
+    INDEX idx_conversation (sender_id, receiver_id, created_at),
+    INDEX idx_unread (receiver_id, is_read, is_deleted)
+    
+) ENGINE=InnoDB
+CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- ====================================
+
 -- =====================================
 
 -- Thêm departments trước (vì users có foreign key tham chiếu)
 INSERT INTO departments (id, name, code, description, manager_id) VALUES
 ('d1', 'Engineering', 'ENG', 'Phòng phát triển hệ thống & kỹ thuật', NULL),
-('d2', 'Management', 'MNG', 'Phòng quản lý & điều hành dự án', NULL);
+('d2', 'Management', 'MNG', 'Phòng quản lý & điều hành dự án', NULL),
+('d3', 'Information Technology', 'IT', 'Phòng IT', NULL),
+('d4', 'Marketing', 'MKT', 'Phòng Marketing', NULL),
+('d5', 'Design', 'DS', 'Phòng thiết kế', NULL),
+('d6', 'Construction', 'CON', 'Phòng hạ tầng', NULL);
+
 
 -- Thêm users với department_id
 INSERT INTO users (id, name, password, role, position, level, department_id, skills, email) VALUES
@@ -260,3 +318,34 @@ INSERT INTO task_items (id, group_id, title, estimated_time) VALUES
 INSERT INTO check_items (id, item_id, title, completed) VALUES
 ('c1', 'i1', 'Xác định các entity chính', TRUE),
 ('c2', 'i1', 'Thiết lập mối quan hệ', TRUE);
+
+-- ====================================users==tin nhắn===================
+INSERT INTO messages
+(sender_id, receiver_id, content, message_type, is_read, created_at)
+VALUES
+-- An (1024) -> Bình (4592)
+('1024', '4592', 'Chào Bình, em check giúp anh tiến độ frontend nhé.', 'TEXT', TRUE,  '2025-10-01 09:00:00'),
+('4592', '1024', 'Dạ ok anh, em đang hoàn thiện UI chat.', 'TEXT', TRUE,  '2025-10-01 09:02:00'),
+('1024', '4592', 'Nhớ tối ưu responsive cho mobile nha.', 'TEXT', TRUE,  '2025-10-01 09:03:30'),
+
+-- Bình -> An (reply)
+('4592', '1024', 'Dạ, em dùng Tailwind grid + container custom.', 'TEXT', TRUE, '2025-10-01 09:05:00'),
+
+-- Bình gửi ảnh UI
+('4592', '1024', 'Em gửi anh preview UI chat.', 'IMAGE', TRUE, '2025-10-01 09:06:00'),
+('4592', '1024', 'Ảnh UI chat', 'IMAGE', TRUE, '2025-10-01 09:06:10'),
+
+-- Bình (4592) -> Cường (8831)
+('4592', '8831', 'Cường ơi, API message list xong chưa?', 'TEXT', TRUE,  '2025-10-01 10:00:00'),
+('8831', '4592', 'Xong rồi chị, có phân trang + unread count.', 'TEXT', TRUE,  '2025-10-01 10:02:00'),
+
+-- Cường gửi file API spec
+('8831', '4592', 'Em gửi file API spec nhé.', 'FILE', TRUE, '2025-10-01 10:03:00'),
+
+-- An (1024) -> Cường (8831)
+('1024', '8831', 'Cường, phần socket realtime test ổn chưa?', 'TEXT', FALSE, '2025-10-01 11:00:00'),
+('8831', '1024', 'Dạ ổn anh, dùng WebSocket + fallback polling.', 'TEXT', FALSE, '2025-10-01 11:02:00'),
+
+-- Reply message (reply_to_message_id sẽ cập nhật sau)
+('1024', '8831', 'Ok tốt, nhớ log lại lỗi nếu có.', 'TEXT', FALSE, '2025-10-01 11:03:00');
+-- ======================================tin nhắn===================
