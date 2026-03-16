@@ -14,7 +14,7 @@ services:
       - DB_HOST=mysql
       - DB_USER=root
       - DB_PASSWORD=rootpassword
-      - DB_NAME=defaultdb
+      - DB_NAME=newdb2
       - DB_PORT=3306
       # Không truyền DB_SSL_CA để server chạy mode không SSL
       - PORT=3001
@@ -33,7 +33,7 @@ services:
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: defaultdb
+      MYSQL_DATABASE: newdb2
     ports:
       # Map ra port 3307 ở máy host để không đụng port 3306 (nếu máy bạn đang chạy mysql khác)
       - "3307:3306"
