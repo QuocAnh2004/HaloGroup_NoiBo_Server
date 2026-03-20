@@ -105,39 +105,84 @@ exports.createMember = async (req, res) => {
   }
 };
 
+// exports.updateMember = async (req, res) => {
+//   try {
+//     const { id } = req.params;
+//     const { name, email, phone, position, level, department, skills, github_url } = req.body;
+
+//     // Kiểm tra tồn tại
+//     const existing = await query('SELECT id FROM users WHERE id = ?', [id]);
+//     if (existing.length === 0) {
+//       return res.status(404).json({ message: 'Nhân viên không tồn tại.' });
+//     }
+
+//     // Xây dựng query động hoặc update từng trường
+//     const sql = `
+//       UPDATE users 
+//       SET name = ?, email = ?, phone = ?, position = ?, level = ?, department = ?, skills = ?, github_url = ?
+//       WHERE id = ?
+//     `;
+
+//     await query(sql, [name, email, phone, position, level, department, skills, github_url, id]);
+
+//     // Lấy lại thông tin đã update
+//     const updatedUser = await query(`
+//       SELECT id, name, role, avatar_url, created_at,
+//              email, phone, position, level, department, skills, github_url
+//       FROM users WHERE id = ?
+//     `, [id]);
+
+//     res.json(updatedUser[0]);
+//   } catch (error) {
+//     res.status(500).json({ message: error.message });
+//   }
+// };
+
 exports.updateMember = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, email, phone, position, level, department, skills, github_url } = req.body;
+    // ✅ Đổi "department" → "department_id"
+    const { name, email, phone, position, level, department_id, skills, github_url } = req.body;
 
-    // Kiểm tra tồn tại
     const existing = await query('SELECT id FROM users WHERE id = ?', [id]);
     if (existing.length === 0) {
       return res.status(404).json({ message: 'Nhân viên không tồn tại.' });
     }
 
-    // Xây dựng query động hoặc update từng trường
+    // ✅ Đổi column "department" → "department_id" trong SQL
     const sql = `
       UPDATE users 
-      SET name = ?, email = ?, phone = ?, position = ?, level = ?, department = ?, skills = ?, github_url = ?
+      SET name = ?, email = ?, phone = ?, position = ?, level = ?, department_id = ?, skills = ?, github_url = ?
       WHERE id = ?
     `;
 
-    await query(sql, [name, email, phone, position, level, department, skills, github_url, id]);
+    await query(sql, [name, email, phone, position, level, department_id, skills, github_url, id]);
 
-    // Lấy lại thông tin đã update
+    // ✅ SELECT lại đúng column
     const updatedUser = await query(`
-      SELECT id, name, role, avatar_url, created_at,
-             email, phone, position, level, department, skills, github_url
-      FROM users WHERE id = ?
+      SELECT u.id, u.name, u.role, u.avatar_url, u.created_at,
+             u.email, u.phone, u.position, u.level, u.department_id, u.skills, u.github_url,
+             d.name as departmentName, d.code as departmentCode
+      FROM users u
+      LEFT JOIN departments d ON u.department_id = d.id
+      WHERE u.id = ?
     `, [id]);
 
-    res.json(updatedUser[0]);
+    const user = updatedUser[0];
+    const response = {
+      ...user,
+      department: user.departmentName
+        ? { id: user.department_id, name: user.departmentName, code: user.departmentCode }
+        : null
+    };
+    delete response.departmentName;
+    delete response.departmentCode;
+
+    res.json(response);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
-
 exports.deleteMember = async (req, res) => {
   try {
     const { id } = req.params;
