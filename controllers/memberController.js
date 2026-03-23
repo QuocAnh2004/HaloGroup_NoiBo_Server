@@ -101,6 +101,7 @@ exports.createMember = async (req, res) => {
 
     res.status(201).json({ id, name, role: finalRole, avatar_url });
   } catch (error) {
+    
     res.status(500).json({ message: error.message });
   }
 };
@@ -144,6 +145,14 @@ exports.updateMember = async (req, res) => {
     // ✅ Đổi "department" → "department_id"
     const { name, email, phone, position, level, department_id, skills, github_url } = req.body;
 
+    const dept = await query(
+  'SELECT id FROM departments WHERE id = ?',
+  [department_id]
+);
+
+if (department_id && dept.length === 0) {
+  return res.status(400).json({ message: 'Department không tồn tại' });
+}
     const existing = await query('SELECT id FROM users WHERE id = ?', [id]);
     if (existing.length === 0) {
       return res.status(404).json({ message: 'Nhân viên không tồn tại.' });
@@ -180,6 +189,7 @@ exports.updateMember = async (req, res) => {
 
     res.json(response);
   } catch (error) {
+    res.status(500).json({ message: error.message });
     res.status(500).json({ message: error.message });
   }
 };
